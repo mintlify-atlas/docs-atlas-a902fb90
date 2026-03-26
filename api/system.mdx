@@ -1,0 +1,469 @@
+---
+title: 'System & Utility Endpoints'
+description: 'Endpoints for managing wimlib-imagex, 7-Zip, native file pickers, real-time logs, and the server process.'
+---
+
+## GET /api/status
+
+Returns the current server state: how many file operations are in progress and which WIM is open.
+
+### Response
+
+<ResponseField name="activeOperations" type="number">
+  Number of ongoing file operations (extract, add, delete, replace, batch-import).
+</ResponseField>
+
+<ResponseField name="currentWim" type="string | null">
+  Absolute path of the currently open WIM file, or `null` if no file is open.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/api/status
+```
+
+```json
+{
+  "activeOperations": 0,
+  "currentWim": "C:\\sources\\install.wim"
+}
+```
+
+---
+
+## GET /api/wimlib-version
+
+Returns the version of the bundled `wimlib-imagex.exe`.
+
+### Response
+
+<ResponseField name="version" type="string">
+  Parsed version string, e.g. `"1.14.4"`.
+</ResponseField>
+
+<ResponseField name="raw" type="string">
+  The full first line of `wimlib-imagex --version` output, e.g. `"wimlib-imagex 1.14.4"`.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/api/wimlib-version
+```
+
+```json
+{
+  "version": "1.14.4",
+  "raw": "wimlib-imagex 1.14.4"
+}
+```
+
+---
+
+## GET /api/7z-status
+
+Returns the current 7-Zip detection status without re-running detection.
+
+### Response
+
+<ResponseField name="available" type="boolean">
+  `true` if a usable `7z.exe` was found.
+</ResponseField>
+
+<ResponseField name="path" type="string">
+  Full path to the detected `7z.exe`, or an empty string if not found.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Detection source, e.g. `"system-7z"` or `"not-found"`.
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message when `available` is `false`, otherwise an empty string.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/api/7z-status
+```
+
+```json
+{
+  "available": true,
+  "path": "C:\\Program Files\\7-Zip\\7z.exe",
+  "type": "system-7z",
+  "error": ""
+}
+```
+
+---
+
+## POST /api/7z-test
+
+Re-runs 7-Zip detection and verifies the detected executable is callable. Updates the server's internal status.
+
+No request body is required.
+
+### Response
+
+Same fields as `GET /api/7z-status`, plus:
+
+<ResponseField name="version" type="string">
+  First line of `7z --help` output (e.g. `"7-Zip 24.08 (x64)"`). Only present when 7-Zip is available.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/7z-test
+```
+
+```json
+{
+  "available": true,
+  "path": "C:\\Program Files\\7-Zip\\7z.exe",
+  "type": "system-7z",
+  "error": "",
+  "version": "7-Zip 24.08 (x64) : Copyright (c) 1999-2024 Igor Pavlov"
+}
+```
+
+---
+
+## POST /api/7z-install
+
+Installs 7-Zip using `winget install 7zip.7zip --silent`. Requires `winget` to be available in the system PATH (included by default in Windows 11 and Windows 10 1809+).
+
+After a successful install, the server re-runs detection and updates its internal status.
+
+No request body is required.
+
+### Response
+
+On success, returns the updated 7-Zip status plus:
+
+<ResponseField name="success" type="boolean">
+  `true` when winget reported a successful install.
+</ResponseField>
+
+### Errors
+
+| Status | Condition |
+|--------|-----------|
+| `500` | `winget` failed or is not available |
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/7z-install
+```
+
+```json
+{
+  "success": true,
+  "available": true,
+  "path": "C:\\Program Files\\7-Zip\\7z.exe",
+  "type": "system-7z",
+  "error": ""
+}
+```
+
+---
+
+## POST /api/7z-set-path
+
+Configures a custom directory to search for `7z.exe`. Useful when 7-Zip is installed in a non-standard location.
+
+### Request
+
+<ParamField body="dirPath" type="string" required>
+  Absolute path to the directory containing `7z.exe`.
+
+  Example: `C:\\MyTools\\7-Zip`
+</ParamField>
+
+### Response
+
+On success, returns the updated 7-Zip status plus:
+
+<ResponseField name="success" type="boolean">
+  `true` when `7z.exe` was found in the specified directory.
+</ResponseField>
+
+### Errors
+
+| Status | Condition |
+|--------|-----------|
+| `400` | `dirPath` was not provided |
+| `404` | `7z.exe` was not found in the specified directory |
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/7z-set-path \
+  -H "Content-Type: application/json" \
+  -d '{"dirPath": "C:\\MyTools\\7-Zip"}'
+```
+
+```json
+{
+  "success": true,
+  "available": true,
+  "path": "C:\\MyTools\\7-Zip\\7z.exe",
+  "type": "system-7z",
+  "error": ""
+}
+```
+
+---
+
+## GET /api/pick-file
+
+Opens a native Windows file picker dialog using PowerShell. Blocks until the user selects a file or dismisses the dialog.
+
+<Note>
+This endpoint may take up to 120 seconds to respond if the user takes time with the dialog. Do not set short client timeouts for this call.
+</Note>
+
+### Response
+
+<ResponseField name="path" type="string | null">
+  Absolute path of the selected file, or `null` if the dialog was dismissed.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/api/pick-file
+```
+
+```json
+{
+  "path": "C:\\Users\\user\\Downloads\\install.wim"
+}
+```
+
+---
+
+## GET /api/pick-folder
+
+Opens a native Windows folder picker dialog using PowerShell. Blocks until the user selects a folder or dismisses the dialog.
+
+<Note>
+This endpoint may take up to 120 seconds to respond. Do not set short client timeouts.
+</Note>
+
+### Response
+
+<ResponseField name="path" type="string | null">
+  Absolute path of the selected folder, or `null` if the dialog was dismissed.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/api/pick-folder
+```
+
+```json
+{
+  "path": "C:\\Users\\user\\Desktop\\output"
+}
+```
+
+---
+
+## POST /api/wimlib-cmd
+
+Runs an arbitrary `wimlib-imagex` command and returns its output. Intended for advanced use and the built-in terminal UI.
+
+<Warning>
+This endpoint executes whatever arguments you pass directly to `wimlib-imagex`. There is no input validation beyond requiring `rawArgs` to be a non-empty string.
+</Warning>
+
+### Request
+
+<ParamField body="rawArgs" type="string" required>
+  Arguments to pass to `wimlib-imagex`, as a single string. Quoted arguments are supported.
+
+  The shorthand `-help` is automatically normalized to `--help`.
+
+  Example: `"info install.wim 1"`
+</ParamField>
+
+### Response
+
+<ResponseField name="stdout" type="string">
+  Standard output from the command.
+</ResponseField>
+
+<ResponseField name="stderr" type="string">
+  Standard error output from the command.
+</ResponseField>
+
+<ResponseField name="exitCode" type="number">
+  Process exit code. `0` indicates success.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/wimlib-cmd \
+  -H "Content-Type: application/json" \
+  -d '{"rawArgs": "info install.wim 1"}'
+```
+
+```json
+{
+  "stdout": "Index:                  1\nName:                   Windows 11 Home\n...",
+  "stderr": "",
+  "exitCode": 0
+}
+```
+
+---
+
+## GET /api/logs/stream
+
+Opens a Server-Sent Events (SSE) connection that streams log entries in real time as the server performs operations.
+
+The connection stays open until the client disconnects.
+
+### Response
+
+Content-Type: `text/event-stream`
+
+The first event sent immediately after connecting:
+
+```
+data: {"type":"init","msg":"Conectado al stream de logs"}
+```
+
+Subsequent events follow this shape:
+
+<ResponseField name="ts" type="string">
+  ISO 8601 timestamp of the log entry.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Log level/category. One of: `"info"`, `"warn"`, `"error"`, `"op"`, `"cmd"`, `"7z"`, `"debug"`.
+</ResponseField>
+
+<ResponseField name="msg" type="string">
+  Log message text.
+</ResponseField>
+
+### Example
+
+```bash
+curl -N http://localhost:3000/api/logs/stream
+```
+
+```
+data: {"type":"init","msg":"Conectado al stream de logs"}
+
+data: {"ts":"2024-06-15T10:30:00.000Z","type":"info","msg":"Abriendo: C:\\sources\\install.wim"}
+
+data: {"ts":"2024-06-15T10:30:01.200Z","type":"op","msg":"▶ Iniciando: Listar contenido"}
+```
+
+---
+
+## GET /api/logs/history
+
+Returns the last 200 log entries buffered in memory since the server started.
+
+### Response
+
+A JSON array of log entry objects. Each entry has the same shape as an SSE event from `GET /api/logs/stream`:
+
+<ResponseField name="ts" type="string">
+  ISO 8601 timestamp.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Log level/category.
+</ResponseField>
+
+<ResponseField name="msg" type="string">
+  Log message.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/api/logs/history
+```
+
+```json
+[
+  {
+    "ts": "2024-06-15T10:29:58.000Z",
+    "type": "info",
+    "msg": "WimExplorer iniciado en http://localhost:3000"
+  },
+  {
+    "ts": "2024-06-15T10:30:00.000Z",
+    "type": "info",
+    "msg": "Abriendo: C:\\sources\\install.wim"
+  }
+]
+```
+
+---
+
+## POST /api/exit
+
+Shuts down the WimExplorer server process. The server responds before exiting, with a 500 ms delay to allow the response to be delivered.
+
+### Request
+
+<ParamField body="force" type="boolean" default="false">
+  When `false` (default), the shutdown is blocked if any file operations are currently in progress. Set to `true` to force an immediate exit regardless.
+</ParamField>
+
+### Response
+
+**When operations are in progress and `force` is `false`:**
+
+<ResponseField name="blocked" type="boolean">
+  `true` — the exit was prevented.
+</ResponseField>
+
+<ResponseField name="activeOperations" type="number">
+  Number of operations currently running.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable explanation, e.g. `"Hay 1 operación(es) en curso"`.
+</ResponseField>
+
+**When the exit proceeds:**
+
+<ResponseField name="success" type="boolean">
+  `true` — the server will exit after 500 ms.
+</ResponseField>
+
+### Example
+
+```bash
+# Graceful exit
+curl -X POST http://localhost:3000/api/exit \
+  -H "Content-Type: application/json" \
+  -d '{"force": false}'
+```
+
+```json
+{
+  "success": true
+}
+```
+
+```bash
+# Force exit even if operations are running
+curl -X POST http://localhost:3000/api/exit \
+  -H "Content-Type: application/json" \
+  -d '{"force": true}'
+```

@@ -1,97 +1,59 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "WimExplorer"
+description: "A visual application for exploring and editing WIM, ESD, and SWM Windows image files — no command line required."
 ---
 
-## Setting up
+WimExplorer gives you a full graphical interface to open, browse, and modify Windows image files (`.wim`, `.esd`, `.swm`). Extract files, add new content, replace existing entries, and delete items — all powered by `wimlib-imagex` under the hood, with real-time logs and a built-in terminal for advanced use.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Download WimExplorer and get it running on Windows in minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Open your first WIM file and start exploring its contents.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="File Operations" icon="file-pen" href="/guides/operations">
+    Extract, add, replace, and delete files inside WIM images.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Integrate with WimExplorer's local REST API from your own scripts.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What you can do
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="Browse image contents" icon="folder-tree" href="/guides/browsing-content">
+    Navigate folders and files with a tree panel, content table, and breadcrumb bar.
+  </Card>
+  <Card title="Multi-image WIM support" icon="layer-group" href="/guides/opening-files">
+    Select individual images from WIM files that contain multiple Windows editions.
+  </Card>
+  <Card title="Conflict detection" icon="triangle-exclamation" href="/guides/conflict-detection">
+    WimExplorer checks for duplicate paths before importing and lets you decide how to proceed.
+  </Card>
+  <Card title="Real-time logs" icon="terminal" href="/guides/logs-and-terminal">
+    Watch every operation in a live log console with streaming output from wimlib.
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Getting started
 
-## Need inspiration?
+<Steps>
+  <Step title="Download and run the launcher">
+    Run `WimExplorer-v1.1.exe`. The launcher verifies your system automatically — it will prompt to install Node.js if needed.
+  </Step>
+  <Step title="Open a WIM file">
+    Type or paste the path to a `.wim`, `.esd`, or `.swm` file in the path bar, then click **Abrir**.
+  </Step>
+  <Step title="Select an image">
+    If the file contains multiple images (e.g., different Windows editions), a selector appears — choose the one you want to explore.
+  </Step>
+  <Step title="Browse and edit">
+    Navigate the folder tree, select files, and use the toolbar to extract, add, replace, or delete content.
+  </Step>
+</Steps>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Note>
+  WimExplorer requires **7-Zip** to display file sizes and modification dates. If it's not found on startup, you'll be prompted to install it automatically via `winget` or specify its path manually.
+</Note>

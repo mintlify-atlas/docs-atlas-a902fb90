@@ -1,0 +1,61 @@
+---
+title: "Browsing Contents"
+description: "Navigating folders and files inside a WIM image using the tree panel, content table, and breadcrumb bar."
+---
+
+WimExplorer presents the contents of an open WIM image using three coordinated navigation elements: a folder tree on the left, a content table on the right, and a breadcrumb bar along the top.
+
+## Folder tree panel
+
+The left panel displays the full directory structure of the current WIM image as a collapsible tree.
+
+- **Click** any folder to navigate into it and populate the content table on the right.
+- **Expand/collapse** folders by clicking their arrow indicator.
+- Use the **▼ collapse all** button in the panel header to collapse the entire tree at once.
+
+The panel header shows "📂 Estructura" as a label for the tree.
+
+<Tip>
+  The divider between the tree panel and the content table is draggable. Drag the resize handle left or right to give more space to whichever panel you need.
+</Tip>
+
+## Content table
+
+The right panel shows the contents of the currently selected folder. The table has four columns:
+
+| Column | Description |
+|--------|-------------|
+| **Name** | File or folder name |
+| **Size** | File size in bytes (requires 7-Zip) |
+| **Modified** | Last-modified timestamp (requires 7-Zip) |
+| **Type** | `directory` or `file` |
+
+Size and Modified metadata are provided by 7-Zip during the listing scan. Without 7-Zip installed and detected, these columns remain blank.
+
+The panel header displays the file count for the current folder.
+
+## Breadcrumb navigation
+
+The breadcrumb bar below the header shows your current path inside the WIM image. Click any segment of the breadcrumb to jump directly to that folder.
+
+## Selecting files
+
+- **Single click** — selects one item in the content table.
+- **Ctrl+A** — selects all visible items in the current folder.
+- **Checkbox in the table header** — selects or deselects all items in the current folder.
+
+Selected items are highlighted and the toolbar action buttons (Extract, Delete, Replace) become enabled.
+
+## Navigating into folders
+
+**Double-click** a folder row in the content table to enter it. The breadcrumb, content table, and tree panel all update to reflect the new location.
+
+## Right-click context menu
+
+Right-clicking one or more selected items opens a context menu with the following actions:
+
+- **Extract** — extract the selected items to a folder on disk
+- **Replace** — replace the selected file with a new one from disk (single selection only)
+- **Delete** — permanently remove the selected items from the WIM image
+
+See [File Operations](/guides/operations) for details on each action.

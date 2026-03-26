@@ -1,0 +1,95 @@
+{
+  "projectType": "saas",
+  "projectName": "WimExplorer",
+  "projectDescription": "A visual desktop application for exploring and editing WIM, ESD, and SWM Windows image files using wimlib-imagex as its engine.",
+  "theme": "almond",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Using WimExplorer",
+            "pages": [
+              "guides/opening-files",
+              "guides/browsing-content",
+              "guides/operations",
+              "guides/conflict-detection",
+              "guides/logs-and-terminal"
+            ]
+          },
+          {
+            "group": "Configuration & Troubleshooting",
+            "pages": [
+              "guides/requirements",
+              "guides/7zip-setup",
+              "guides/keyboard-shortcuts",
+              "guides/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "REST API",
+            "pages": [
+              "api/overview",
+              "api/wim-operations",
+              "api/file-operations",
+              "api/system"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Visual file explorer with folder tree, content table, and breadcrumb navigation",
+    "Open and browse WIM, ESD, and SWM image files",
+    "Multi-image selector for WIM files with multiple internal images",
+    "Extract files and folders to any destination on the system",
+    "Add files or folders via buttons or drag-and-drop",
+    "Replace existing files inside WIM images",
+    "Delete content with visual confirmation dialog",
+    "Conflict detection before importing to prevent accidental overwrites",
+    "Real-time log streaming console (SSE-based)",
+    "Integrated wimlib-imagex terminal for advanced commands",
+    "7-Zip integration for enriched file metadata (size, date)",
+    "System tray integration for quick access and controlled shutdown",
+    "Intelligent launcher that auto-installs Node.js and dependencies"
+  ],
+  "publicApiSurface": [
+    "POST /api/open — Open a WIM/ESD/SWM file and read image metadata",
+    "GET /api/browse — List contents of the current image (7z + wimlib fallback)",
+    "POST /api/extract — Extract selected files/folders to a destination directory",
+    "POST /api/add — Upload and add files to the current WIM image",
+    "POST /api/delete — Delete files or folders from the current WIM image",
+    "POST /api/replace — Replace a file in the WIM with an uploaded file",
+    "POST /api/batch-import — Batch import files with server-side conflict revalidation",
+    "POST /api/check-conflicts — Check for path conflicts before importing",
+    "POST /api/wimlib-cmd — Execute raw wimlib-imagex commands via the terminal",
+    "GET /api/logs/stream — SSE endpoint for real-time log streaming",
+    "GET /api/logs/history — Retrieve recent log history",
+    "GET /api/status — Get current operation status and open WIM path",
+    "GET /api/wimlib-version — Get the bundled wimlib-imagex version",
+    "GET /api/7z-status — Get 7-Zip availability and path info",
+    "POST /api/7z-install — Install 7-Zip via winget",
+    "POST /api/7z-set-path — Set a custom 7-Zip directory path",
+    "GET /api/pick-file — Open native Windows file picker (PowerShell)",
+    "GET /api/pick-folder — Open native Windows folder picker (PowerShell)",
+    "POST /api/exit — Gracefully shut down the WimExplorer server"
+  ]
+}

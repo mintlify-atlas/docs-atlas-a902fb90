@@ -1,0 +1,90 @@
+---
+title: "Installation"
+description: "How to download and set up WimExplorer on Windows."
+---
+
+## System requirements
+
+- **OS:** Windows 7, Windows 10, or Windows 11
+- **Node.js:** v18 or later _(the launcher can install this automatically)_
+- **7-Zip:** must be installed and accessible as `7z.exe`
+
+<Note>
+  If 7-Zip is not found, WimExplorer will offer to install it via `winget` or let you point to its location manually.
+</Note>
+
+## Installation steps
+
+<Steps>
+  <Step title="Download the release">
+    Download the WimExplorer release package. It contains:
+
+    ```text
+    WimExplorer-v1.1.exe     ← launcher (single entry point)
+    recursos/                ← app files (server, frontend, dependencies)
+    wimlib/                  ← wimlib-imagex engine
+    LICENSES/                ← open-source license texts
+    ```
+
+    Place the entire folder wherever you want on your system. The launcher resolves all internal paths at runtime, so the location does not matter.
+  </Step>
+
+  <Step title="Run the launcher">
+    Double-click `WimExplorer-v1.1.exe`.
+
+    This is the **only file you need to run**. Do not launch `server.js` or `start.bat` directly unless you are developing or debugging.
+  </Step>
+
+  <Step title="Node.js check">
+    The launcher immediately checks whether Node.js v18+ is available on your system.
+
+    **If Node.js is already installed**, this step is skipped automatically.
+
+    **If Node.js is missing**, a dialog appears with three options:
+
+    | Option | What happens |
+    |--------|--------------|
+    | **Yes** | Installs Node.js automatically via `winget` (requires internet and admin rights) |
+    | **No** | Opens [nodejs.org](https://nodejs.org) in your browser for manual installation |
+    | **Cancel** | Exits without doing anything |
+
+    After an automatic install, the launcher re-checks that Node.js is available before continuing.
+
+    <Warning>
+      Automatic Node.js installation via `winget` requires **administrator privileges**. Windows will show a UAC prompt. If you decline, the installation will not complete and you will need to install Node.js manually.
+    </Warning>
+  </Step>
+
+  <Step title="Dependency installation">
+    If the `node_modules` folder is missing (always the case on first run after extracting the release), the launcher will ask whether to run `npm install`.
+
+    Click **Yes**. This downloads the required packages (`express`, `multer`, `open`, `systray2`, `7zip-bin`, `fast-xml-parser`) into the `recursos/node_modules/` folder.
+
+    This step only happens once. On subsequent launches the launcher skips it.
+  </Step>
+
+  <Step title="App starts">
+    With all requirements satisfied, the launcher starts the Node.js server silently in the background and opens your default browser at:
+
+    ```
+    http://localhost:3000
+    ```
+
+    WimExplorer is now running and ready to use.
+  </Step>
+</Steps>
+
+<Note>
+  The entire WimExplorer folder can be moved to any machine or any path at any time. The launcher resolves all internal paths at runtime relative to its own location, so nothing breaks when you move or copy the folder.
+</Note>
+
+## Alternative launch (development only)
+
+If you are working on the app itself, you can start the server directly without the launcher:
+
+```bat
+cd recursos
+npm start
+```
+
+This runs `node server.js` with a visible console window and a `Ctrl+C` prompt to stop the server. It skips the Node.js and dependency checks that the launcher performs.

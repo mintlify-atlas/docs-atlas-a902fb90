@@ -1,0 +1,100 @@
+---
+title: "File Operations"
+description: "Extracting, adding, replacing, and deleting files inside WIM images using WimExplorer."
+---
+
+WimExplorer supports four file operations: Extract, Add, Replace, and Delete. All write operations (Add, Replace, Delete) use `wimlib-imagex update` under the hood, passing commands to the process via stdin.
+
+## Extract
+
+Extracts one or more files or folders from the WIM image to a folder on disk. Uses `POST /api/extract` → `wimlib-imagex extract`.
+
+<Steps>
+  <Step title="Select items">
+    In the content table, click to select one or more files or folders. Use `Ctrl+A` to select everything in the current folder.
+  </Step>
+
+  <Step title="Open the Extract dialog">
+    Click **Extraer** in the bottom toolbar, or right-click the selection and choose **Extract**.
+  </Step>
+
+  <Step title="Choose a destination folder">
+    In the Extract modal, type the full path to the destination folder, or click the **📁** browse button to open a folder picker. The folder is created automatically if it does not exist.
+  </Step>
+
+  <Step title="Confirm">
+    Click **Extraer**. The selected items are written to the chosen folder. Progress is visible in the Logs console.
+  </Step>
+</Steps>
+
+## Add
+
+Adds files or a folder from disk into the WIM image at the current browse path. Uses `POST /api/add` (single upload) or `POST /api/batch-import` (drag-and-drop / folder import) via multipart upload.
+
+<Steps>
+  <Step title="Navigate to the target folder">
+    In the tree panel or content table, navigate to the folder inside the WIM where you want to add files.
+  </Step>
+
+  <Step title="Choose how to add">
+    There are two ways to start an add operation:
+
+    - **Toolbar split button** — Click the main **Agregar** button or its dropdown arrow (`▼`) to choose between **📄 Archivos** (individual files) or **📁 Carpeta** (an entire folder). The appropriate file or folder picker opens.
+    - **Drag and drop** — Drag files or a folder from Windows Explorer and drop them onto the content table panel.
+  </Step>
+
+  <Step title="Conflict check">
+    Before uploading, WimExplorer checks whether any of the selected files already exist at the destination path in the WIM. If conflicts are found, the [Conflict Detection](/guides/conflict-detection) modal appears. Choose to proceed (replacing conflicting files) or cancel.
+  </Step>
+
+  <Step title="Upload and import">
+    Files are uploaded to the server and added to the WIM at the current browse path. Progress appears in the Logs console. The content table refreshes after the operation completes.
+  </Step>
+</Steps>
+
+## Replace
+
+Replaces a single existing file in the WIM with a new file from disk. Internally, the server issues a `delete` command followed by an `add` command in the same `wimlib-imagex update` stdin batch. Uses `POST /api/replace`.
+
+<Steps>
+  <Step title="Select exactly one file">
+    Click a single file in the content table. The **Reemplazar** button in the toolbar becomes enabled.
+  </Step>
+
+  <Step title="Open the Replace dialog">
+    Click **Reemplazar** in the toolbar, or right-click and choose **Replace**.
+  </Step>
+
+  <Step title="Choose the replacement file">
+    In the Replace modal, use the file picker to select the new file from disk.
+  </Step>
+
+  <Step title="Confirm">
+    Click **Reemplazar**. The existing file is deleted from the WIM, then the new file is added at the same path.
+  </Step>
+</Steps>
+
+## Delete
+
+Permanently removes one or more files or folders from the WIM image. Uses `POST /api/delete` → `wimlib-imagex update` with `delete` stdin commands.
+
+<Warning>
+  Deletion is irreversible. There is no undo. Make sure you have a backup of the WIM file before deleting content.
+</Warning>
+
+<Steps>
+  <Step title="Select items">
+    Select one or more files or folders in the content table.
+  </Step>
+
+  <Step title="Trigger the delete">
+    Use any of the following:
+    - Click **Eliminar** in the bottom toolbar.
+    - Press the `Delete` key.
+    - Right-click the selection and choose **Delete**.
+  </Step>
+
+  <Step title="Review and confirm">
+    The Delete confirmation modal lists every item that will be removed. Review the list, then click **Eliminar** to confirm.
+  </Step>
+</Steps>

@@ -1,0 +1,333 @@
+---
+title: 'File Operations'
+description: 'API endpoints for extracting, adding, replacing, and deleting files in the currently open WIM image.'
+---
+
+<Note>
+All file-operation endpoints require a WIM to be open. Call `POST /api/open` first, then `GET /api/browse` to populate the conflict-detection index.
+</Note>
+
+## POST /api/extract
+
+Extracts one or more files or directories from the current image to a local destination directory.
+
+Internally runs:
+```
+wimlib-imagex extract <wim> <imageIndex> <paths...> --dest-dir=<destDir> --no-globs
+```
+
+### Request
+
+<ParamField body="paths" type="string[]" required>
+  Array of WIM-relative paths to extract. Use backslash separators.
+
+  Example: `["\\\\Windows\\\\System32\\\\ntdll.dll", "\\\\Windows\\\\explorer.exe"]`
+</ParamField>
+
+<ParamField body="destDir" type="string" required>
+  Absolute path of the local directory to extract into. Created automatically if it does not exist.
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  `true` when all paths were extracted successfully.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable summary, e.g. `"Extraído(s) 2 elemento(s) a C:\\output"`.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/extract \
+  -H "Content-Type: application/json" \
+  -d '{"paths": ["\\Windows\\System32\\ntdll.dll"], "destDir": "C:\\extracted"}'
+```
+
+```json
+{
+  "success": true,
+  "message": "Extraído(s) 1 elemento(s) a C:\\extracted"
+}
+```
+
+---
+
+## POST /api/add
+
+Uploads one or more files and adds them into the current image at the specified destination path. Accepts `multipart/form-data`.
+
+Files are first written to a temporary directory on the server, then added to the WIM via `wimlib-imagex update` with `add` commands piped through stdin. Temporary files are deleted after the operation.
+
+<Warning>
+The WIM file must not be open exclusively by another process. The server automatically kills any active 7-Zip listing process and checks write access before attempting the update.
+</Warning>
+
+### Request
+
+Content-Type: `multipart/form-data`
+
+<ParamField body="files" type="file[]" required>
+  One or more files to upload. Maximum **50 files** per request.
+</ParamField>
+
+<ParamField body="destPath" type="string" default="\\">
+  WIM-relative destination directory. Each uploaded file is placed at `<destPath>\\<originalname>`. Defaults to the root `\\`.
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  `true` when all files were added successfully.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable summary, e.g. `"Agregado(s) 3 archivo(s)"`.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/add \
+  -F "files=@/local/path/config.ini" \
+  -F "destPath=\\Windows\\System32"
+```
+
+```json
+{
+  "success": true,
+  "message": "Agregado(s) 1 archivo(s)"
+}
+```
+
+---
+
+## POST /api/delete
+
+Deletes one or more files or directories from the current image.
+
+Internally issues `delete "<path>"` commands to `wimlib-imagex update` via stdin. Deleting a directory removes it and all its contents.
+
+### Request
+
+<ParamField body="paths" type="string[]" required>
+  Array of WIM-relative paths to delete.
+
+  Example: `["\\\\Windows\\\\Temp\\\\old.log", "\\\\Users\\\\Default\\\\Downloads"]`
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  `true` when all paths were deleted successfully.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable summary, e.g. `"Eliminado(s) 2 elemento(s)"`.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/delete \
+  -H "Content-Type: application/json" \
+  -d '{"paths": ["\\Windows\\Temp\\old.log"]}'
+```
+
+```json
+{
+  "success": true,
+  "message": "Eliminado(s) 1 elemento(s)"
+}
+```
+
+---
+
+## POST /api/replace
+
+Replaces a single file in the current image with an uploaded file. Accepts `multipart/form-data`.
+
+The operation is atomic at the wimlib level: the server first issues a `delete` for the target path, then an `add` in the same `wimlib-imagex update` call.
+
+### Request
+
+Content-Type: `multipart/form-data`
+
+<ParamField body="file" type="file" required>
+  The single replacement file to upload.
+</ParamField>
+
+<ParamField body="targetPath" type="string" required>
+  Full WIM-relative path of the file to replace, including filename.
+
+  Example: `\\Windows\\System32\\drivers\\etc\\hosts`
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  `true` when the replace completed successfully.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation string, e.g. `"Reemplazado: \\Windows\\System32\\ntdll.dll"`.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/replace \
+  -F "file=@/local/path/hosts" \
+  -F "targetPath=\\Windows\\System32\\drivers\\etc\\hosts"
+```
+
+```json
+{
+  "success": true,
+  "message": "Reemplazado: \\Windows\\System32\\drivers\\etc\\hosts"
+}
+```
+
+---
+
+## POST /api/check-conflicts
+
+Checks which files in a proposed upload set already exist in the current image. Uses the cached path index built by `GET /api/browse` for O(1) lookups — no disk I/O is performed.
+
+<Note>
+Call `GET /api/browse` before this endpoint to ensure the path index is up to date.
+</Note>
+
+### Request
+
+<ParamField body="files" type="object[]" required>
+  Array of file descriptors to check.
+
+  <Expandable title="properties">
+    <ParamField body="name" type="string" required>
+      Filename (e.g., `"config.ini"`).
+    </ParamField>
+
+    <ParamField body="relativePath" type="string">
+      Path relative to `destPath`, including the filename (e.g., `"subfolder\\\\config.ini"`). Falls back to `name` if omitted.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="destPath" type="string" required>
+  WIM-relative destination directory where the files would be placed.
+</ParamField>
+
+### Response
+
+<ResponseField name="total" type="number">
+  Total number of files checked.
+</ResponseField>
+
+<ResponseField name="newCount" type="number">
+  Number of files that do not yet exist in the image.
+</ResponseField>
+
+<ResponseField name="conflictCount" type="number">
+  Number of files that already exist in the image.
+</ResponseField>
+
+<ResponseField name="conflictList" type="object[]">
+  Entries for each conflicting file.
+
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">Filename.</ResponseField>
+    <ResponseField name="relativePath" type="string">Relative path as provided in the request.</ResponseField>
+    <ResponseField name="wimPath" type="string">Full WIM-relative path the file would be written to.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="newList" type="object[]">
+  Entries for each new (non-conflicting) file. Same shape as `conflictList`.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/check-conflicts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "files": [
+      {"name": "hosts", "relativePath": "hosts"},
+      {"name": "newfile.txt", "relativePath": "newfile.txt"}
+    ],
+    "destPath": "\\Windows\\System32\\drivers\\etc"
+  }'
+```
+
+```json
+{
+  "total": 2,
+  "newCount": 1,
+  "conflictCount": 1,
+  "conflictList": [
+    {
+      "name": "hosts",
+      "relativePath": "hosts",
+      "wimPath": "\\Windows\\System32\\drivers\\etc\\hosts"
+    }
+  ],
+  "newList": [
+    {
+      "name": "newfile.txt",
+      "relativePath": "newfile.txt",
+      "wimPath": "\\Windows\\System32\\drivers\\etc\\newfile.txt"
+    }
+  ]
+}
+```
+
+---
+
+## POST /api/batch-import
+
+Uploads up to 200 files in a single request and adds them to the current image. Conflicting files (those that already exist at their destination path) are automatically replaced. Accepts `multipart/form-data`.
+
+The server performs a server-side revalidation against the cached `wimPathsLower` index before writing, regardless of what `POST /api/check-conflicts` reported client-side. This prevents race conditions.
+
+### Request
+
+Content-Type: `multipart/form-data`
+
+<ParamField body="files" type="file[]" required>
+  Files to upload. Maximum **200 files** per request.
+</ParamField>
+
+<ParamField body="destPaths" type="string" required>
+  JSON-encoded array of WIM-relative destination paths, one per file in the same order as the `files` field.
+
+  Example: `'["\\\\folder\\\\a.txt", "\\\\folder\\\\b.txt"]'`
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  `true` when the import completed.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Summary including the number of files imported and replaced, e.g. `"Importados 5 archivo(s) (2 reemplazados)"`.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/batch-import \
+  -F "files=@/local/a.txt" \
+  -F "files=@/local/b.dll" \
+  -F 'destPaths=["\\folder\\a.txt","\\Windows\\System32\\b.dll"]'
+```
+
+```json
+{
+  "success": true,
+  "message": "Importados 2 archivo(s) (1 reemplazados)"
+}
+```

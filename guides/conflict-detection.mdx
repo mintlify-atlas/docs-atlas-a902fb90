@@ -1,0 +1,65 @@
+---
+title: "Conflict Detection"
+description: "How WimExplorer detects and handles duplicate files when importing content into a WIM image."
+---
+
+WimExplorer automatically checks for filename conflicts before any add or drag-and-drop import operation, giving you the opportunity to review and decide how to proceed.
+
+## When conflicts are checked
+
+A conflict check runs every time you:
+
+- Add files using the **Agregar** toolbar button (files or folder).
+- Drag and drop files or folders onto the content panel.
+
+The check happens on the client before files are uploaded, using a locally cached index of all paths currently in the WIM image.
+
+## How it works
+
+When you browse a folder (via `GET /api/browse`), the server scans the entire WIM image using 7-Zip and builds a flat list of all paths. These paths are stored in a `Set` (lowercase) for O(1) lookup:
+
+```javascript
+wimPathsLower = new Set(); // rebuilt on every browse
+```
+
+<Note>
+  The conflict index is rebuilt each time you browse a folder. If you add files externally or the WIM changes outside of WimExplorer, browse again to refresh the index before importing.
+</Note>
+
+When you select files to add, WimExplorer sends their names and relative paths to `POST /api/check-conflicts`. The server checks each proposed destination path against `wimPathsLower` and returns two lists:
+
+- **New files** — paths that do not yet exist in the WIM.
+- **Replacements** — paths that already exist and would be overwritten.
+
+## The conflict modal
+
+If any conflicts are found, the **Conflictos detectados** modal appears before the upload begins. It shows two columns:
+
+| Column | Contents |
+|--------|----------|
+| **Nuevos** | Files that will be added as new entries |
+| **Reemplazos** | Files that already exist and will be replaced |
+
+From this modal you can:
+
+- Click **Importar todo** to proceed. Conflicting files are deleted first, then all files (new and replacements) are added in a single `wimlib-imagex update` batch.
+- Click **Cancelar** to abort the import entirely. No changes are made to the WIM.
+
+## Server-side revalidation
+
+Even after the client-side conflict check, the server revalidates conflicts independently when `POST /api/batch-import` is called. The server checks each destination path against the same `wimPathsLower` set before issuing any write commands. This prevents race conditions where the index might have changed between the check and the actual write.
+
+## Example scenario
+
+You drag 5 files from Windows Explorer onto the content panel:
+
+- `boot.ini` — already exists in the WIM at `\boot.ini`
+- `ntldr` — already exists in the WIM at `\ntldr`
+- `config.sys`, `autoexec.bat`, `readme.txt` — do not exist in the WIM
+
+WimExplorer detects 2 conflicts. The conflict modal appears showing:
+
+- **Nuevos (3):** `config.sys`, `autoexec.bat`, `readme.txt`
+- **Reemplazos (2):** `boot.ini`, `ntldr`
+
+If you click **Importar todo**, the server issues `delete` commands for `boot.ini` and `ntldr`, then `add` commands for all 5 files in a single update pass.

@@ -1,0 +1,206 @@
+---
+title: 'WIM Operations'
+description: 'API endpoints for opening WIM/ESD/SWM files and browsing their contents.'
+---
+
+## POST /api/open
+
+Opens a WIM, ESD, or SWM file and loads its image metadata into the server's `currentWim` state. Subsequent browse and file-operation requests operate on this file.
+
+The server tries to parse metadata from the file's embedded XML first. If XML parsing fails, it falls back to plain-text parsing of `wimlib-imagex info` output.
+
+<Warning>
+Calling `POST /api/open` replaces any previously open WIM. The cached file tree and conflict-detection index are cleared until you call `GET /api/browse` again.
+</Warning>
+
+### Request
+
+<ParamField body="wimPath" type="string" required>
+  Absolute path to the WIM, ESD, or SWM file on the local filesystem.
+
+  Example: `C:\\sources\\install.wim`
+</ParamField>
+
+### Response
+
+<ResponseField name="path" type="string">
+  Absolute path of the opened file, echoed back from the request.
+</ResponseField>
+
+<ResponseField name="wimInfo" type="object">
+  Top-level metadata about the WIM archive.
+
+  <Expandable title="properties">
+    <ResponseField name="imageCount" type="number">
+      Total number of images contained in the file.
+    </ResponseField>
+
+    <ResponseField name="compression" type="string | null">
+      Compression type (e.g., `"LZX"`, `"LZMS"`, `"None"`). This field is `null` when metadata was read from the embedded XML, because the XML format does not include compression information.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="images" type="object[]">
+  One object per image in the file.
+
+  <Expandable title="properties">
+    <ResponseField name="index" type="number">
+      1-based image index.
+    </ResponseField>
+
+    <ResponseField name="name" type="string">
+      Image name (e.g., `"Windows 11 Pro"`).
+    </ResponseField>
+
+    <ResponseField name="description" type="string">
+      Image description string.
+    </ResponseField>
+
+    <ResponseField name="dirCount" type="number">
+      Number of directories in the image.
+    </ResponseField>
+
+    <ResponseField name="fileCount" type="number">
+      Number of files in the image.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Errors
+
+| Status | Condition |
+|--------|-----------|
+| `400` | `wimPath` was not provided in the request body |
+| `404` | The file at `wimPath` does not exist on disk |
+| `500` | wimlib-imagex failed to read the file |
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/open \
+  -H "Content-Type: application/json" \
+  -d '{"wimPath": "C:\\sources\\install.wim"}'
+```
+
+```json
+{
+  "path": "C:\\sources\\install.wim",
+  "wimInfo": {
+    "imageCount": 5,
+    "compression": null
+  },
+  "images": [
+    {
+      "index": 1,
+      "name": "Windows 11 Home",
+      "description": "",
+      "dirCount": 24831,
+      "fileCount": 108442
+    },
+    {
+      "index": 2,
+      "name": "Windows 11 Pro",
+      "description": "",
+      "dirCount": 24843,
+      "fileCount": 108501
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/browse
+
+Returns a complete recursive file tree for a specific image in the currently open WIM. Also rebuilds the internal conflict-detection path index (`wimPathsLower`) used by `POST /api/check-conflicts`.
+
+The server uses 7-Zip (`7z l -slt`) to list files when it is available. If 7-Zip is not installed or fails, it falls back to `wimlib-imagex dir`.
+
+<Note>
+Browsing large images (e.g., a full Windows install.wim image) can take several seconds. Monitor progress in real time via `GET /api/logs/stream`.
+</Note>
+
+### Query parameters
+
+<ParamField query="image" type="number" default="currentWim.imageIndex">
+  1-based index of the image to browse. Defaults to the index of the last selected image. Setting this parameter also updates `currentWim.imageIndex` for subsequent operations.
+</ParamField>
+
+### Response
+
+The response is a single tree node representing the root directory `\\`. Every directory node contains a `children` array with its contents.
+
+<ResponseField name="name" type="string">
+  Entry name. Always `"\\"` for the root.
+</ResponseField>
+
+<ResponseField name="path" type="string">
+  Full WIM-relative path using backslash separators. Always `"\\"` for the root.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Either `"directory"` or `"file"`.
+</ResponseField>
+
+<ResponseField name="size" type="number">
+  File size in bytes. `0` for directories.
+</ResponseField>
+
+<ResponseField name="modified" type="string">
+  Last-modified timestamp as an ISO 8601 datetime string (e.g., `"2024-06-15T10:30:00"`). Empty string if not available.
+</ResponseField>
+
+<ResponseField name="children" type="object[]">
+  Child nodes. Present on directory nodes; omitted on file nodes. Each child has the same shape as the parent.
+</ResponseField>
+
+### Errors
+
+| Status | Condition |
+|--------|-----------|
+| `400` | No WIM is currently open |
+| `500` | Both 7-Zip and wimlib-imagex dir failed |
+
+### Example
+
+```bash
+curl "http://localhost:3000/api/browse?image=1"
+```
+
+```json
+{
+  "name": "\\",
+  "path": "\\",
+  "type": "directory",
+  "size": 0,
+  "modified": "",
+  "children": [
+    {
+      "name": "Windows",
+      "path": "\\Windows",
+      "type": "directory",
+      "size": 0,
+      "modified": "",
+      "children": [
+        {
+          "name": "System32",
+          "path": "\\Windows\\System32",
+          "type": "directory",
+          "size": 0,
+          "modified": "",
+          "children": [
+            {
+              "name": "ntdll.dll",
+              "path": "\\Windows\\System32\\ntdll.dll",
+              "type": "file",
+              "size": 2105344,
+              "modified": "2024-06-01T12:00:00"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```

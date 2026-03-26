@@ -1,0 +1,90 @@
+---
+title: "Troubleshooting"
+description: "Solutions to common issues with WimExplorer"
+---
+
+<AccordionGroup>
+  <Accordion title="WimExplorer doesn't start / blank screen">
+    1. Verify that Node.js 18 or higher is installed by running the following in a terminal:
+
+    ```bash
+    node --version
+    ```
+
+    The output should be `v18.x.x` or higher. If not, see [System Requirements](/guides/requirements).
+
+    2. Try launching directly from the `recursos/` folder to see any error output:
+
+    ```powershell
+    cd recursos
+    node server.js
+    ```
+
+    3. Make sure the WimExplorer folder was not extracted to a path containing special characters (such as `#`, `%`, `&`, or non-ASCII letters). Move it to a simpler path like `C:\WimExplorer\` and try again.
+  </Accordion>
+
+  <Accordion title='"Permission denied" error when modifying a WIM file'>
+    WIM files downloaded from the internet or extracted from ISOs are often marked read-only by Windows.
+
+    WimExplorer automatically attempts to remove the read-only flag before each write operation and retries up to **3 times** with increasing delays between attempts.
+
+    If the error persists after retries:
+
+    1. Locate the WIM file in Windows Explorer.
+    2. Right-click the file and select **Properties**.
+    3. At the bottom of the General tab, uncheck **Read-only**.
+    4. Click **OK** and retry the operation in WimExplorer.
+  </Accordion>
+
+  <Accordion title="File sizes and dates are missing / blank columns">
+    The **Size** and **Date Modified** columns are populated by 7-Zip. If they are blank, 7-Zip is not detected.
+
+    Check the **7z button** in the header — a red dot means 7-Zip was not found.
+
+    Follow the [7-Zip Setup](/guides/7zip-setup) guide to install or configure 7-Zip.
+  </Accordion>
+
+  <Accordion title="Operation appears to hang / spinning loader">
+    - Open the **Logs** console at the bottom of the interface to see real-time status messages. Active operations are streamed there as they run.
+    - Large WIM files (several gigabytes) can take several minutes to list, especially on the first browse.
+    - The **status bar** shows an active operation counter. If the counter is greater than zero, an operation is still in progress.
+    - Do not close the browser tab or navigate away while an operation is running.
+  </Accordion>
+
+  <Accordion title="Conflict modal shows everything as a conflict">
+    The conflict index is built when you browse into a folder. If the WIM file was modified by an external tool after you last browsed, the cached index may be stale.
+
+    To refresh it, click the **root folder** in the folder tree on the left. This re-browses the WIM and rebuilds the conflict index from scratch.
+  </Accordion>
+
+  <Accordion title="wimlib terminal command fails with error code 47">
+    Error code 47 is a "Permission denied" error from wimlib. It typically means the WIM file is locked by another process.
+
+    Common causes:
+
+    - A lingering `7z.exe` process is still scanning the file. WimExplorer automatically kills `7z.exe` before write operations, but if the process was started externally, it may persist.
+    - Another application (such as Windows Explorer or a backup tool) has the file open.
+
+    Steps to resolve:
+
+    1. Wait a few seconds and retry the operation — WimExplorer retries automatically up to 3 times.
+    2. Close any other applications that may have the WIM file open.
+    3. If the problem persists, open Task Manager and end any `7z.exe` processes manually, then retry.
+  </Accordion>
+
+  <Accordion title="Cannot find WimExplorer in the system tray">
+    The `systray2` package used for the system tray icon may not function correctly in some environments, including certain terminal sessions and Remote Desktop (RDP) connections.
+
+    The application itself continues to run normally even if the tray icon is not visible. You can access it at any time by navigating to:
+
+    ```
+    http://localhost:3000
+    ```
+
+    To close the application without the tray icon, use the **Exit** option within the WimExplorer interface.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  If you encounter an issue not listed here, please report it on the [WimExplorer GitHub repository](https://github.com/KilzaNiko/WimExplorer/issues).
+</Note>

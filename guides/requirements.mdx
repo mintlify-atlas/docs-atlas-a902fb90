@@ -1,0 +1,50 @@
+---
+title: "System Requirements"
+description: "What you need to run WimExplorer on Windows"
+---
+
+WimExplorer runs as a local web application on your Windows machine. It requires a small number of dependencies, most of which can be installed automatically on first launch.
+
+## Operating System
+
+WimExplorer supports **Windows 7, 10, and 11** (64-bit). It is not supported on macOS or Linux.
+
+## Dependencies
+
+| Dependency | Required | Auto-installable |
+|---|---|---|
+| Windows 7, 10, or 11 (x64) | Yes | No |
+| Node.js 18 or higher | Yes | Yes — via `winget` |
+| 7-Zip (`7z.exe`) | Yes | Yes — via `winget` |
+
+<Note>
+  Both Node.js and 7-Zip can be installed automatically by the WimExplorer launcher if they are not already present on your system. You will be prompted with options when you run `WimExplorer-v1.1.exe` for the first time.
+</Note>
+
+## Node.js
+
+Node.js version **18 or higher** is required to run the backend server. If it is not installed when you launch WimExplorer, a dialog will appear with three options:
+
+- **Yes** — Install automatically via `winget` (requires internet and administrator permissions)
+- **No** — Open the Node.js website for manual installation
+- **Cancel** — Exit without doing anything
+
+After an automatic install, the launcher re-verifies that Node.js is available before continuing.
+
+## 7-Zip
+
+7-Zip is required by the WimExplorer UI. If it is not detected on startup, a modal appears and blocks use until you install or configure it. Without 7-Zip, the **Size** and **Date Modified** columns in the file table remain blank, and WimExplorer falls back to `wimlib-imagex dir` for listing (no size or date metadata).
+
+See the [7-Zip Setup](/guides/7zip-setup) guide for configuration details, including how to install via `winget` or point to an existing install.
+
+## Disk Space
+
+WimExplorer's own footprint is minimal. It uses a temporary directory at `recursos/tmp/` to stage files during upload operations. This directory is created automatically and cleaned up after each operation.
+
+## Network
+
+No internet connection is required after setup. WimExplorer runs entirely on `localhost:3000`. The launcher opens your default browser automatically when the server starts.
+
+## Browser
+
+Any modern browser works — Chrome, Edge, Firefox, or others. The launcher opens your system default browser automatically. You can also navigate to `http://localhost:3000` in any browser while the app is running.

@@ -1,0 +1,74 @@
+---
+title: "Logs and Terminal"
+description: "Monitoring operations in real time and running advanced wimlib-imagex commands from within WimExplorer."
+---
+
+WimExplorer includes two built-in tools for visibility and control: a live log console and an integrated wimlib terminal. Both are accessible from the header and share a bottom drawer panel.
+
+## Live logs
+
+The log console streams every operation, command, and status message from the server in real time.
+
+### Opening the log console
+
+Click the **🖥️ Logs** button in the header. The console drawer opens at the bottom of the screen. A green dot on the button pulses while an operation is in progress.
+
+### How logs stream
+
+The UI connects to `GET /api/logs/stream`, a Server-Sent Events (SSE) endpoint. Each event is a JSON object pushed by the server as soon as it is generated. On reconnect, `GET /api/logs/history` fetches the last 200 entries from the server's buffer (which holds up to 2000 entries total).
+
+### Log types
+
+| Type | Description |
+|------|-------------|
+| `info` | General status and progress messages |
+| `warn` | Non-fatal warnings (e.g., 7-Zip not found, retry attempts) |
+| `error` | Operation failures and error details |
+| `op` | Operation start and completion markers |
+| `cmd` | The exact `wimlib-imagex` command being executed |
+| `7z` | 7-Zip listing progress and results |
+| `debug` | Internal diagnostic messages |
+
+### Console actions
+
+- **📋 Copy log** — copies all visible log entries to the clipboard.
+- **🗑️ Clear** — clears the console display (does not delete the server-side buffer).
+- **⛶ Fullscreen** — opens the log console in a fullscreen modal.
+
+<Tip>
+  Use the fullscreen view when following a long operation such as importing a large folder. The expanded view makes it easier to track `cmd` and `op` entries without scrolling.
+</Tip>
+
+## wimlib terminal
+
+The integrated terminal lets you run `wimlib-imagex` commands directly from the browser without opening a command prompt.
+
+### Opening the terminal
+
+Click the **⌨️ Terminal** button in the header. The terminal pane opens in the same bottom drawer as the log console, on the **Terminal** tab.
+
+### Running commands
+
+Type a command into the input field next to the `wimlib-imagex>` prompt and press `Enter` or click **Ejecutar**. Do not include the `wimlib-imagex` prefix — just the subcommand and its arguments.
+
+```text
+wimlib-imagex> info install.wim
+wimlib-imagex> dir install.wim 1
+wimlib-imagex> --help
+```
+
+The command is sent to `POST /api/wimlib-cmd`. The server runs it with `wimlib-imagex.exe` and returns both `stdout` and `stderr`, which are displayed in the terminal output area.
+
+You can also use `-help` as a shorthand for `--help`:
+
+```text
+wimlib-imagex> -help
+```
+
+### Fullscreen terminal
+
+Click the **⛶** button in the terminal header to open the terminal in a fullscreen modal. The input prompt remains active in fullscreen mode.
+
+<Note>
+  The terminal runs any `wimlib-imagex` subcommand, including write operations such as `update` and `delete`. Commands that modify the WIM (add, delete, update) will alter the actual file on disk. Use read/info subcommands (`info`, `dir`, `extract`) when you only want to inspect the image.
+</Note>

@@ -1,0 +1,58 @@
+---
+title: "Opening WIM Files"
+description: "How to open WIM, ESD, and SWM files and select internal images in WimExplorer."
+---
+
+WimExplorer supports `.wim`, `.esd`, and `.swm` image files. Once a file is opened, WimExplorer reads its metadata and, for multi-image WIM files, presents a selector so you can choose which internal image to explore.
+
+## Supported formats
+
+| Format | Description |
+|--------|-------------|
+| `.wim` | Standard Windows Imaging Format. May contain one or more internal images. |
+| `.esd` | Encrypted/compressed variant of WIM, typically used by Windows Setup. Usually contains a single image. |
+| `.swm` | Split WIM — a WIM archive split across multiple files. |
+
+## Opening a file
+
+<Steps>
+  <Step title="Enter or browse to the file path">
+    In the header, type the full path to your `.wim`, `.esd`, or `.swm` file into the path input field.
+
+    Alternatively, click the **📁** browse button next to the input field. This calls `GET /api/pick-file`, which launches a native Windows file picker via PowerShell. The selected path is automatically filled into the input.
+  </Step>
+
+  <Step title="Click Abrir">
+    Click the **Abrir** button (or press `Enter` while the path input has focus). WimExplorer sends the path to `POST /api/open`.
+  </Step>
+
+  <Step title="Wait for metadata to load">
+    The server reads image metadata using `wimlib-imagex info <file> --xml`. If the XML output cannot be parsed, it falls back to plain-text output from `wimlib-imagex info <file>`.
+
+    Metadata extracted from the WIM includes:
+
+    - **Index** — the image number within the WIM
+    - **Name** — the image label (e.g., `Windows 11 Home`)
+    - **Description** — optional description text
+    - **File count** — total number of files in the image
+    - **Directory count** — total number of directories
+  </Step>
+
+  <Step title="Select an image (multi-image WIM only)">
+    If the file contains more than one image, the **Select image** modal appears automatically. Each entry in the list shows the image index, name, description, file count, and directory count. Click the image you want to explore.
+
+    <Note>
+      ESD files typically contain a single image, so the image selector modal does not appear for most `.esd` files.
+    </Note>
+  </Step>
+
+  <Step title="Browse the image contents">
+    After selecting an image, WimExplorer loads the file tree. The folder tree panel populates on the left and you can start navigating immediately.
+  </Step>
+</Steps>
+
+## Switching between images
+
+After a file is open, the **Imagen** dropdown in the header lists all images in the WIM. Select a different entry to reload the file tree for that image without reopening the file.
+
+The dropdown is hidden for single-image files.

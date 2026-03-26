@@ -1,0 +1,72 @@
+---
+title: "7-Zip Setup"
+description: "How WimExplorer uses 7-Zip and how to configure it"
+---
+
+<Note>
+  7-Zip is required by the WimExplorer UI — if it is not detected on startup, a modal blocks use until you install it or specify its path. The server can fall back to `wimlib-imagex dir` for listing, but without 7-Zip the **Size** and **Date Modified** columns will be blank and the startup modal will not be dismissed until 7-Zip is configured.
+</Note>
+
+## Why 7-Zip Is Used
+
+WimExplorer uses 7-Zip (`7z.exe`) to extract rich metadata from WIM, ESD, and SWM files — specifically file sizes and modification dates. This data is displayed in the content table alongside each file entry.
+
+When 7-Zip is not available, the app uses `wimlib-imagex dir` as a fallback. This still lists all files and folders, but the Size and Date Modified columns remain empty.
+
+## Automatic Detection on Startup
+
+Every time WimExplorer starts, it runs an automatic detection routine (`detect7z`) that scans the following locations in order:
+
+1. `C:\Program Files\7-Zip\7z.exe`
+2. `C:\Program Files (x86)\7-Zip\7z.exe`
+3. `C:\ProgramData\chocolatey\bin\7z.exe`
+4. `%LOCALAPPDATA%\Microsoft\WindowsApps\7z.exe`
+5. All directories listed in the system `PATH` environment variable
+
+If `7z.exe` is found in any of these locations, it is used automatically and no further configuration is needed.
+
+## If 7-Zip Is Not Found
+
+If detection fails, a modal appears with three options:
+
+| Option | Action |
+|---|---|
+| Install automatically | Runs `winget install 7zip.7zip --silent` in the background |
+| I already have 7-Zip | Opens a folder browser to point to your existing install |
+| Exit WimExplorer | Closes the application |
+
+After an automatic winget install, detection runs again immediately. If 7-Zip is found, the app continues normally.
+
+## Status Indicator
+
+The **7z button** in the application header shows a colored dot indicating the current 7-Zip status:
+
+- **Green dot** — 7-Zip is detected and ready
+- **Red dot** — 7-Zip was not found
+
+Clicking the button displays the current status details: the resolved path, detection type, and whether it is available.
+
+## Manual Path Configuration
+
+If 7-Zip is installed in a non-standard location, you can point WimExplorer to it manually.
+
+<Steps>
+  <Step title="Click the 7z button in the header">
+    The 7z status button is located in the top header bar. Clicking it opens the 7-Zip status panel.
+  </Step>
+  <Step title="Choose 'I already have 7-Zip'">
+    Select the option to browse for an existing installation.
+  </Step>
+  <Step title="Select the folder containing 7z.exe">
+    Use the folder browser to navigate to the directory that contains `7z.exe`. You do not need to select the file itself — just the containing folder.
+  </Step>
+  <Step title="Confirm detection">
+    WimExplorer will search the selected folder (and a `7-Zip` subfolder within it) for `7z.exe`. If found, the status dot turns green and the path is saved for the current session.
+  </Step>
+</Steps>
+
+You can also set a custom path programmatically via `POST /api/7z-set-path` with a JSON body containing `{ "dirPath": "C:\\path\\to\\your\\7zip" }`.
+
+## Behavior During Write Operations
+
+Before any write operation (add, replace, delete), WimExplorer automatically terminates any active `7z.exe` process. This prevents file-lock conflicts that would otherwise cause wimlib to fail with a permission error.

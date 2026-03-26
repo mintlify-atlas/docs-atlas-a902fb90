@@ -1,0 +1,92 @@
+---
+title: 'API Overview'
+description: 'Introduction to the WimExplorer local REST API — base URL, data formats, error conventions, and a full endpoint reference.'
+---
+
+WimExplorer exposes a local REST API served by an Express.js process running on your machine. The frontend communicates with this API exclusively; you can also call it directly from scripts or tools like `curl`.
+
+## Base URL
+
+```
+http://localhost:3000
+```
+
+<Note>
+The server only binds to `localhost`. It is not reachable from other machines on your network and requires no authentication.
+</Note>
+
+## Data formats
+
+| Direction | Format |
+|-----------|--------|
+| Request body (most endpoints) | `application/json` |
+| Request body (file uploads) | `multipart/form-data` |
+| Response | `application/json` |
+| Log stream | `text/event-stream` (SSE) |
+
+## Error format
+
+All error responses use a consistent JSON body with an HTTP 4xx or 5xx status code:
+
+```json
+{
+  "error": "Descriptive error message"
+}
+```
+
+Common status codes:
+
+| Code | Meaning |
+|------|---------|
+| `400` | Missing or invalid request parameter |
+| `404` | File or resource not found |
+| `500` | Internal server error or wimlib/7-Zip failure |
+
+## Server state
+
+The server maintains a `currentWim` state object in memory:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | `string \| null` | Absolute path of the currently open WIM/ESD/SWM file |
+| `imageIndex` | `number` | Index of the currently selected image (1-based) |
+| `images` | `array` | Metadata for all images in the open file |
+
+Most endpoints operate on `currentWim`. Open a WIM file with `POST /api/open` before calling browse or file-operation endpoints.
+
+## Endpoint quick reference
+
+### WIM Operations
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/open` | Open a WIM/ESD/SWM file and load its image metadata |
+| `GET` | `/api/browse` | Return a recursive file tree for the current image |
+
+### File Operations
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/extract` | Extract files or directories to a local folder |
+| `POST` | `/api/add` | Upload and add files into the WIM |
+| `POST` | `/api/delete` | Delete files or directories from the WIM |
+| `POST` | `/api/replace` | Replace a single file in-place |
+| `POST` | `/api/batch-import` | Bulk-upload files with automatic conflict handling |
+| `POST` | `/api/check-conflicts` | Check which files already exist in the current image |
+
+### System & Utility
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/status` | Active operation count and current WIM path |
+| `GET` | `/api/wimlib-version` | Installed wimlib-imagex version |
+| `GET` | `/api/7z-status` | Current 7-Zip detection status |
+| `POST` | `/api/7z-test` | Re-detect and verify 7-Zip |
+| `POST` | `/api/7z-install` | Install 7-Zip via `winget` |
+| `POST` | `/api/7z-set-path` | Set a custom 7-Zip directory |
+| `GET` | `/api/pick-file` | Open a native Windows file picker dialog |
+| `GET` | `/api/pick-folder` | Open a native Windows folder picker dialog |
+| `POST` | `/api/wimlib-cmd` | Run an arbitrary wimlib-imagex command |
+| `GET` | `/api/logs/stream` | Subscribe to the real-time SSE log stream |
+| `GET` | `/api/logs/history` | Retrieve the last 200 log entries |
+| `POST` | `/api/exit` | Shut down the WimExplorer server process |

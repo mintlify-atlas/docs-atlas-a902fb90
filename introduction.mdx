@@ -1,0 +1,96 @@
+---
+title: "Introduction"
+description: "What WimExplorer is, why it exists, and who it's for."
+---
+
+WimExplorer is a visual editor for `.wim`, `.esd`, and `.swm` image files on Windows. It wraps the powerful `wimlib-imagex` engine in a clean web-based interface so you can explore, extract, add, replace, and delete content without writing a single command.
+
+If you have ever found opening or modifying a WIM image tedious — tracking flags, remembering syntax, piping output — WimExplorer is built to remove that friction entirely.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Visual file explorer" icon="folder-open">
+    Navigate WIM contents with a folder tree, breadcrumb bar, and file table showing name, size, date, and type — just like Windows Explorer.
+  </Card>
+  <Card title="One-click operations" icon="computer-mouse">
+    Extract, add, replace, and delete files or entire folders directly from the toolbar or right-click context menu.
+  </Card>
+  <Card title="Multi-image support" icon="layer-group">
+    WIM files can contain multiple internal images. WimExplorer lets you pick which one to work with from a dropdown selector.
+  </Card>
+  <Card title="Conflict detection" icon="triangle-exclamation">
+    Before importing files, WimExplorer checks for duplicates and lets you decide how to handle each conflict.
+  </Card>
+  <Card title="Live logs & terminal" icon="terminal">
+    A built-in console streams `wimlib-imagex` output in real time. An integrated terminal lets you run raw commands when needed.
+  </Card>
+  <Card title="Smart launcher" icon="rocket">
+    The `.exe` launcher checks for Node.js and dependencies automatically before starting — no manual setup required on a fresh machine.
+  </Card>
+  <Card title="Drag and drop" icon="hand">
+    Import files or folders by dragging them directly onto the interface.
+  </Card>
+  <Card title="System tray integration" icon="bell">
+    Access WimExplorer quickly and shut it down cleanly from the Windows notification area.
+  </Card>
+</CardGroup>
+
+## Supported formats
+
+| Format | Description |
+|--------|-------------|
+| `.wim` | Windows Imaging Format — the standard format used by Windows setup media |
+| `.esd` | Electronic Software Download — a compressed variant of WIM |
+| `.swm` | Split WIM — a WIM image split across multiple files |
+
+## How it works
+
+WimExplorer follows a simple three-layer architecture:
+
+```text
+WimExplorer-v1.1.exe   (launcher)
+  └─ Verifies Node.js and dependencies
+  └─ Starts: node server.js
+        └─ Express server on http://localhost:3000
+              └─ Web UI (HTML + CSS + vanilla JS)
+                    └─ Calls wimlib-imagex for all WIM operations
+                    └─ Uses 7-Zip to enrich file metadata (size, date)
+```
+
+1. **Launcher** — `WimExplorer-v1.1.exe` is the single entry point. It checks for Node.js, installs npm dependencies if needed, then starts the server silently in the background.
+2. **Node.js + Express backend** — `server.js` handles API requests from the UI and delegates all WIM operations to `wimlib-imagex`.
+3. **Web UI** — A vanilla JavaScript frontend served at `http://localhost:3000`, opened automatically in your default browser.
+4. **wimlib-imagex** — The battle-tested open-source engine that performs all read/write operations on WIM, ESD, and SWM files.
+5. **7-Zip** — Used alongside wimlib to retrieve accurate file metadata for display in the file table.
+
+## Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | Node.js + Express |
+| Frontend | HTML, CSS, vanilla JavaScript |
+| WIM engine | `wimlib-imagex` |
+| Metadata | `7-Zip` (`7z.exe`) |
+| Key packages | `multer`, `open`, `systray2`, `7zip-bin`, `fast-xml-parser` |
+
+## Windows compatibility
+
+WimExplorer runs on **Windows 7, Windows 10, and Windows 11**.
+
+## Who is it for?
+
+- System administrators editing Windows installation images
+- Developers inspecting or patching WIM/ESD files from Windows setup media
+- Anyone who wants to work with WIM files faster without memorizing CLI syntax
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Download WimExplorer and get it running on your machine.
+  </Card>
+  <Card title="Quick Start" icon="play" href="/quickstart">
+    Open your first WIM file and explore its contents in under 2 minutes.
+  </Card>
+</CardGroup>
